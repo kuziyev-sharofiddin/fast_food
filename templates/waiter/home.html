@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block body %}
+<div class="header-middle">
+	<!--header-middle-->
+	<div class="container">
+		<div class="row">
+			<div class="col-sm-8">
+				<div class="shop-menu pull-right">
+					<ul class="nav navbar-nav">
+						<li><a href="/order/"><i class="fa fa-star"></i>Your Order</a></li>
+						<li><a href="{% url 'cart_detail' %}"><i class="fa fa-shopping-cart"></i> Cart<span
+									class="badge bg-secondary">{{request.session.cart|length}}</span></a></li>
+					</ul>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+<!--/header-middle-->
+<div class="header-bottom">
+	<!--header-bottom-->
+	<div class="container">
+		<div class="row">
+			<div class="col-sm-9">
+				<div class="navbar-header">
+					<button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+						<span class="sr-only">Toggle navigation</span>
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+					</button>
+				</div>
+				<div class="mainmenu pull-left">
+					<ul class="nav navbar-nav collapse navbar-collapse">
+						<li><a href="{% url 'waiter_home' %}">Account Book</a></li>
+						<!-- <li class="dropdown"><a href="#">Waiter<i class="fa fa-angle-down"></i></a>
+                                    <ul role="menu" class="sub-menu">
+                                        <li><a href="/product/">Add Waiter</a></li>
+										
+
+							
+										<li><a href="/order/">View Waiters</a></li> 
+										 
+                                    </ul>
+                                </li> 
+								<li class="dropdown"><a href="#">Cook<i class="fa fa-angle-down"></i></a>
+                                    <ul role="menu" class="sub-menu">
+                                        <li><a href="/product/">Add Cook</a></li>
+										<li><a href="/order/">View Cooks</a></li> 
+										 
+                                    </ul>
+                                </li>  -->
+						<li><a href="{% url 'dologout' %}">Logout</a></li>
+
+
+
+					</ul>
+				</div>
+			</div>
+			<div class="col-sm-3">
+				<form action="/search/" method="get">
+					<div class="search_box pull-right">
+						<input name="query" type="text" placeholder="Search" />
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+<!--/header-bottom-->
+<section id="slider">
+	<!--slider-->
+	<div class="container">
+		<div class="row">
+			<div class="col-sm-12">
+				<div id="slider-carousel" class="carousel slide" data-ride="carousel">
+					<ol class="carousel-indicators">
+						<li data-target="#slider-carousel" data-slide-to="0" class="active"></li>
+						<li data-target="#slider-carousel" data-slide-to="1"></li>
+						<li data-target="#slider-carousel" data-slide-to="2"></li>
+					</ol>
+				</div>
+			</div>
+		</div>
+		<h1>WAITER</h1>
+</section>
+<!--/slider-->
+<section>
+	<div class="container">
+		<div class="row">
+			<div class="col-sm-9 padding-right">
+				<div class="features_items">
+					<!--features_items-->
+					<h2 class="title text-center">Features Items</h2>
+					{% for prod in product %}
+					<div class="col-sm-4">
+						<div class="product-image-wrapper">
+							<div class="single-products">
+								<div class="productinfo text-center">
+									<img src="{{prod.image.url}}" height="300px" alt="" />
+									<h2>{{prod.price}} so'm</h2>
+									<p>{{prod.name}}</p>
+									<a href="{% url 'cart_add' prod.id %}" class="btn btn-default add-to-cart"><i
+											class="fa fa-shopping-cart"></i>Add to
+										cart</a>
+								</div>
+								<div class="product-overlay">
+									<div class="overlay-content">
+										<h2>${{prod.price}}</h2>
+										<p>{{prod.name}}</p>
+										<a href="{% url 'cart_add' prod.id %}" class="btn btn-default add-to-cart"><i
+												class="fa fa-shopping-cart"></i>Add to
+											cart</a>
+									</div>
+								</div>
+							</div>
+							<div class="choose">
+								<ul class="nav nav-pills nav-justified">
+									<li><a href="{{prod.id}}"><i class="fa fa-plus-square"></i>View product detail</a>
+									</li>
+
+								</ul>
+							</div>
+						</div>
+					</div>
+					{% endfor %}
+					<ul class="pagination">
+						<li class="active"><a href="">1</a></li>
+						<li><a href="">2</a></li>
+						<li><a href="">3</a></li>
+						<li><a href="">&raquo;</a></li>
+					</ul>
+				</div>
+				<!--features_items-->
+			</div>
+		</div>
+	</div>
+</section>
+
+{% endblock %}
