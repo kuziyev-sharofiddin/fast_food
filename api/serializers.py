@@ -19,7 +19,7 @@ class ProductSerializer(serializers.ModelSerializer):
 
 class OrderProductSerializer(serializers.ModelSerializer):
     # order_id = OrderSerializer()
-    # product_id = ProductSerializer()
+    product = ProductSerializer()
 
     class Meta:
         model = OrderProduct

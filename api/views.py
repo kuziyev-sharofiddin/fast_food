@@ -9,44 +9,36 @@ from rest_framework import viewsets
 from rest_framework.response import Response
 from accounts.models import CustomUser
 from django.db.models import Q
+from django.db.models import Sum
+from django.db.models import F
+import datetime
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view, permission_classes
+import requests
 
-# class OrderViewSet(viewsets.ModelViewSet):
 
-#     def create(self, request, *args, **kwargs):
-#         order_data = request.data
-#         # new_order = Order.objects.create(
-#         #     crated_at=order_data['order_id']['crated_at'], crated_by=order_data['order_id']['crated_by'], status=order_data['order_id']['status'])
-#         # new_product = Product.objects.create(
-#         #     name=order_data['product_id']['name'], price=order_data['product_id']['price'])
-#         order_product = OrderProduct.objects.create(
-#             order_id=Order.objects.get('order_id'), product_id=Product.objects.get('product_id'), quantity=['quantity'])
-#         order_product.save()
+def get_orders_by_status(statuses):
+    orders = Order.objects.filter(status__in=statuses)
+    orders_serialized = OrderSerializer(orders, many=True).data
 
-#         order_serializer = OrderProductSerializer(order_product)
-#         return Response(order_serializer.data)
+    for order in orders_serialized:
+        order_products = OrderProduct.objects.filter(order=order["id"])
+        order['records'] = OrderProductSerializer(
+            order_products, many=True).data
+    return orders_serialized
 
 
 @api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
 def order_list(request):
-    # if request.method == 'GET':
-    #     products = OrderProduct.objects.all()
-    #     serializer = OrderProductSerializer(products, many=True)
-    #     return Response(serializer.data)
-
     if request.method == 'GET':
-        orders = Order.objects.filter(Q(status="NEW") | Q(status="PROCESS"))
-        orders_serialized = OrderSerializer(orders, many=True).data
-
-        for order in orders_serialized:
-            order_products = OrderProduct.objects.filter(order=order["id"])
-            order['records'] = OrderProductSerializer(
-                order_products, many=True).data
-
-        return Response(orders_serialized)
+        status = request.GET.getlist('status')
+        return Response(get_orders_by_status(status))
 
     elif request.method == 'POST':
         order_data = request.data
         print(order_data['created_by'])
+
         createdUser = CustomUser.objects.get(id=order_data['created_by'])
         order = Order.objects.create(created_by=createdUser)
         for record in order_data["records"]:
@@ -55,11 +47,13 @@ def order_list(request):
             op = OrderProduct(
                 order=order, product=product, quantity=record["quantity"], price=product.price)
             op.save()
+        print(op.id)
 
-            return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
+        return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
 
 
 @api_view(['GET', 'PUT', 'DELETE', 'PATCH'])
+@permission_classes([IsAuthenticated])
 def order_detail(request, pk):
 
     try:
@@ -73,8 +67,16 @@ def order_detail(request, pk):
         return Response(serializer.data)
 
     elif request.method == 'PATCH':
-        if order:
+        if order.status == "NEW":
             order.status = 'PROCESS'
+            serializer = OrderSerializer(
+                order, data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        elif order.status == "PROCESS":
+            order.status = 'DONE'
             serializer = OrderSerializer(
                 order, data=request.data)
             if serializer.is_valid():
@@ -87,13 +89,45 @@ def order_detail(request, pk):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-@api_view(['GET', 'POST'])
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def order_product_list(request):
+    totals = []
+    for queryset in OrderProduct.objects.all():
+        totals.append({
+            "product_id": queryset.product.id,
+            "product": queryset.product.name,
+            "total": queryset.price * queryset.quantity
+        })
+
+    return Response(totals)
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def total_order_product(request):
 
     if request.method == 'GET':
-        order_products = OrderProduct.objects.all()
-        serializer = OrderProductSerializer(order_products, many=True)
-        return Response(serializer.data)
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
+
+        print(datetime.datetime.strptime(start_date, '%d-%m-%Y'))
+        if start_date is None:
+            start_date = datetime.date.today()
+        else:
+            start_date = datetime.datetime.strptime(start_date, '%d-%m-%Y')
+
+        if end_date is None:
+            end_date = datetime.date.today()
+        else:
+            end_date = datetime.datetime.strptime(end_date, '%d-%m-%Y')
+
+        order_product_total = OrderProduct.objects.filter(order__created_at__range=(start_date, end_date)).aggregate(
+            total=Sum(F('price') * F('quantity'))
+        )['total']
+        return Response({
+            "order_product_total": order_product_total
+        })
 
     elif request.method == 'POST':
         serializer = OrderProductSerializer(data=request.data)
@@ -103,7 +137,8 @@ def order_product_list(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(['GET', 'PUT', 'DELETE'])
+@ api_view(['GET', 'PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
 def order_product_detail(request, pk):
 
     try:
@@ -127,7 +162,8 @@ def order_product_detail(request, pk):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-@api_view(['GET', 'POST'])
+@ api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
 def product_list(request):
 
     if request.method == 'GET':
@@ -143,7 +179,8 @@ def product_list(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(['GET', 'PUT', 'DELETE'])
+@ api_view(['GET', 'PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
 def product_detail(request, pk):
 
     try:
@@ -167,7 +204,8 @@ def product_detail(request, pk):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-@api_view(['GET', 'POST'])
+@ api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
 def customuser_list(request):
 
     if request.method == 'GET':
@@ -183,7 +221,8 @@ def customuser_list(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(['GET', 'PUT', 'DELETE'])
+@ api_view(['GET', 'PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
 def customuser_detail(request, pk):
 
     try:

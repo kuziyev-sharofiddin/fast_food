@@ -45,5 +45,9 @@ class OrderProduct(models.Model):
     price = models.FloatField(default=0)
 
     # def __str__(self):
+    @property
+    def total(self):
+        total_price = self.price*self.quantity
+        return total_price
 
     #     return self.order_id
